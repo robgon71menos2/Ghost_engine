@@ -1,21 +1,33 @@
 import json
+import os
 
 def build_bridge(niche, affiliate_url):
-    # Carga la plantilla base
-    with open("templates/ultra_fast_bridge.html", "r") as f:
+    # Definir rutas absolutas basadas en la ubicación de este script
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    ROOT_DIR = os.path.dirname(BASE_DIR)
+    
+    template_path = os.path.join(ROOT_DIR, "templates", "ultra_fast_bridge.html")
+    dist_dir = os.path.join(ROOT_DIR, "dist")
+    
+    if not os.path.exists(template_path):
+        print(f"❌ Error: No se encuentra la plantilla en {template_path}")
+        return
+
+    with open(template_path, "r") as f:
         html_content = f.read()
 
-    # Inyección de URL y metadatos de ofuscación
     final_html = html_content.replace("{{OFFER_LINK}}", affiliate_url)
     
-    with open("dist/index.html", "w") as f:
+    os.makedirs(dist_dir, exist_ok=True)
+    
+    with open(os.path.join(dist_dir, "index.html"), "w") as f:
         f.write(final_html)
-    print("✅ Landing generada en /dist/index.html lista para despliegue.")
+    print(f"✅ Landing generada con éxito en: {dist_dir}/index.html")
 
-# Ejemplo de uso interno
 if __name__ == "__main__":
-    # Carga de links desde offers.json
-    with open("monetization/offers.json", "r") as f:
+    # Cargar ofertas desde su ubicación real
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(BASE_DIR, "offers.json"), "r") as f:
         offers = json.load(f)
-    # Genera una landing para nicho tecnológico
+    
     build_bridge("tech", offers["tech"])

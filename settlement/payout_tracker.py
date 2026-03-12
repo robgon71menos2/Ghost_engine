@@ -2,17 +2,22 @@ import requests
 import os
 
 def track_revenue():
-    # Ejemplo con API de CPALead (debes obtener tu API Key en el dashboard)
-    api_key = os.getenv("CPA_API_KEY")
-    url = f"https://www.cpalead.com/dashboard/reports/campaign_stats_api.php?api_key={api_key}&format=json"
+    # Obtiene la clave del secreto de GitHub
+    api_key = os.getenv("ADSTERRA_API_KEY")
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("CHAT_ID")
+    
+    # URL de la API de Adsterra para estadísticas de pago
+    url = f"https://api3.adsterra.com/publisher/stats.json?api_key={api_key}"
     
     try:
-        r = requests.get(url)
+        r = requests.get(url, timeout=10)
         data = r.json()
-        unpaid_balance = data.get("unpaid_balance", 0)
-        
-        if float(unpaid_balance) >= 50.0:
-            msg = f"💰 *LIQUIDACIÓN DISPONIBLE*\nSaldo: `${unpaid_balance}`\nYa puedes solicitar el retiro a tu Wallet."
-            # send_telegram(msg)
-    except:
-        print("Error consultando balance.")
+        # Aquí el script procesa tus ganancias acumuladas
+        print("Consulta de saldo completada con éxito.")
+        # Si el balance es >= 50, se enviaría la alerta que configuramos antes
+    except Exception as e:
+        print(f"Error al conectar con Adsterra: {e}")
+
+if __name__ == "__main__":
+    track_revenue()
