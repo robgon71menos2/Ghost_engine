@@ -1,59 +1,50 @@
-name: Ghost Engine - Auto Monetizer
+name: Ghost Engine - Method 2 (Surgical)
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Corre cada 6 horas
-  workflow_dispatch: # Botón de pánico/prueba manual
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 permissions:
-  contents: write # Vital para guardar la base de datos
+  contents: write
 
 jobs:
-  scan-and-monetize:
+  surgical-monetization:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Setup Go
+      - name: Setup Go & Python
         uses: actions/setup-go@v4
         with:
           go-version: 'stable'
-
-      - name: Install Subfinder
-        run: go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install Python Deps
-        run: pip install -r requirements.txt
-
-      - name: Discover Subdomains
+      
+      - name: Install Tools
         run: |
-          # Elige 50 targets al azar para evitar el timeout de 6 horas
+          go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+          pip install -r requirements.txt
+
+      - name: Selective Discovery
+        run: |
+          # Elegimos 50 al azar para no saturar
           shuf -n 50 targets.txt > active_targets.txt
-          # Ejecuta subfinder con hilos aumentados para velocidad
           $(go env GOPATH)/bin/subfinder -dL active_targets.txt -t 100 -silent -o live_subs.txt
 
-      - name: Run Engine & Monetize
+      - name: Run Surgical Engine
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_ID: ${{ secrets.TG_ID }}
-          ADSTERRA_API_KEY: ${{ secrets.ADSTERRA_API_KEY }}
           GH_PAT: ${{ secrets.GH_PAT }}
+          ADSTERRA_API_KEY: ${{ secrets.ADSTERRA_API_KEY }}
         run: |
-          # 1. Generar la landing con tus links de Adsterra
           python monetization/landing_gen.py
-          # 2. Escanear y tomar posesión automática
           python monetization/scanner.py
 
-      - name: Save Results (Persistence)
+      - name: Save Progress to DB
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "Ghost Engine Bot"
-          git add live_subs.txt database/inventory.db
-          git commit -m "Ghost Engine: Actualización automática [skip ci]" || echo "Sin cambios"
+          git config --local user.email "bot@ghostengine.com"
+          git config --local user.name "Ghost Bot"
+          git add database/inventory.db
+          git commit -m "Update inventory: +1 potential asset [skip ci]" || echo "No changes"
           git push
