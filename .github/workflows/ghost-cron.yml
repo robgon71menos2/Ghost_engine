@@ -32,7 +32,11 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Discover Subdomains
-        run: $(go env GOPATH)/bin/subfinder -dL targets.txt -o live_subs.txt
+        run: |
+          # Elige 50 targets al azar para evitar el timeout de 6 horas
+          shuf -n 50 targets.txt > active_targets.txt
+          # Ejecuta subfinder con hilos aumentados para velocidad
+          $(go env GOPATH)/bin/subfinder -dL active_targets.txt -t 100 -silent -o live_subs.txt
 
       - name: Run Engine & Monetize
         env:
