@@ -27,7 +27,7 @@ jobs:
 
       - name: Selective Discovery
         run: |
-          # Elegimos 50 al azar para no saturar
+          # Elegimos 50 al azar
           shuf -n 50 targets.txt > active_targets.txt
           $(go env GOPATH)/bin/subfinder -dL active_targets.txt -t 100 -silent -o live_subs.txt
 
@@ -38,8 +38,9 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
           ADSTERRA_API_KEY: ${{ secrets.ADSTERRA_API_KEY }}
         run: |
+          # Rutas actualizadas a la carpeta core y monetization
           python monetization/landing_gen.py
-          python monetization/scanner.py
+          python core/scanner.py
 
       - name: Save Progress to DB
         run: |
