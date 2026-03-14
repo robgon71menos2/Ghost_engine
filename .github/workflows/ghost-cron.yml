@@ -1,4 +1,4 @@
-name: Ghost Engine - Method 2 (Surgical)
+name: Ghost Engine - Surgical Mode
 
 on:
   schedule:
@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Setup Go & Python
+      - name: Setup Environment
         uses: actions/setup-go@v4
         with:
           go-version: 'stable'
@@ -27,7 +27,7 @@ jobs:
 
       - name: Selective Discovery
         run: |
-          # Elegimos 50 al azar
+          # Usamos el targets.txt de la raíz
           shuf -n 50 targets.txt > active_targets.txt
           $(go env GOPATH)/bin/subfinder -dL active_targets.txt -t 100 -silent -o live_subs.txt
 
@@ -38,14 +38,15 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
           ADSTERRA_API_KEY: ${{ secrets.ADSTERRA_API_KEY }}
         run: |
-          # Rutas actualizadas a la carpeta core y monetization
           python monetization/landing_gen.py
           python core/scanner.py
 
-      - name: Save Progress to DB
+      - name: Save Persistence
         run: |
           git config --local user.email "bot@ghostengine.com"
           git config --local user.name "Ghost Bot"
+          # Creamos la carpeta database si no existe para el push
+          mkdir -p database
           git add database/inventory.db
-          git commit -m "Update inventory: +1 potential asset [skip ci]" || echo "No changes"
+          git commit -m "Ghost Engine: +1 asset found [skip ci]" || echo "No changes"
           git push
