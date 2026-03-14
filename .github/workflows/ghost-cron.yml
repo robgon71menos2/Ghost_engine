@@ -2,8 +2,8 @@ name: Ghost Engine - Surgical Mode
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 * * * *'  # Ejecución automática: Cada hora en punto
+  workflow_dispatch:      # Permite botón manual en GitHub Actions
 
 permissions:
   contents: write
@@ -16,12 +16,19 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Importante para evitar errores en el push
 
       - name: Setup Environment
         uses: actions/setup-go@v4
         with:
           go-version: 'stable'
       
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
       - name: Install Tools
         run: |
           go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
@@ -29,7 +36,7 @@ jobs:
 
       - name: Selective Discovery
         run: |
-          # Usamos el targets.txt de la raíz
+          # Mezclamos objetivos para variar el escaneo
           shuf -n 50 targets.txt > active_targets.txt
           $(go env GOPATH)/bin/subfinder -dL active_targets.txt -t 100 -silent -o live_subs.txt
 
@@ -38,17 +45,17 @@ jobs:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_ID: ${{ secrets.TG_ID }}
           GH_PAT: ${{ secrets.GH_PAT }}
-          ADSTERRA_API_KEY: ${{ secrets.ADSTERRA_API_KEY }}
+          # Usamos tu GH_PAT para que el bot pueda crear repositorios
         run: |
-          python monetization/landing_gen.py
+          # Generamos la landing y escaneamos
           python core/scanner.py
 
       - name: Save Persistence
         run: |
           git config --local user.email "bot@ghostengine.com"
           git config --local user.name "Ghost Bot"
-          # Creamos la carpeta database si no existe para el push
           mkdir -p database
           git add database/inventory.db
-          git commit -m "Ghost Engine: +1 asset found [skip ci]" || echo "No changes"
-          git push
+          # El [skip ci] evita que el bot entre en un bucle infinito
+          git commit -m "Update DB: Data persistence [skip ci]" || echo "No changes"
+          git push origin main
