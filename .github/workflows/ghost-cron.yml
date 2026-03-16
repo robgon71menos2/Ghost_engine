@@ -64,8 +64,18 @@ jobs:
         run: |
           git config --local user.email "bot@ghostengine.com"
           git config --local user.name "Ghost Bot"
-          git pull origin main --rebase # Evita conflictos si editaste algo en la Mac
-          mkdir -p database
+          
+          # 1. Traemos lo que editaste en la web para que el bot lo sepa
+          git fetch origin main
+          
+          # 2. Forzamos al bot a ponerse al día con la web sin borrar la DB nueva
+          git reset --mixed origin/main
+          
+          # 3. Guardamos la base de datos actualizada
           git add database/inventory.db
+          
+          # 4. Hacemos el commit (el [skip ci] es vital para no entrar en bucle)
           git commit -m "Update DB: Data persistence [skip ci]" || echo "No changes"
-          git push origin main
+          
+          # 5. Empujamos los cambios "a la fuerza" para limpiar el historial
+          git push origin main --force
