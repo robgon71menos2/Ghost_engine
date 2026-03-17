@@ -38,14 +38,14 @@ jobs:
           go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
           pip install -r requirements.txt
 
+      
       - name: Selective Discovery
         run: |
-          # Aumentamos a 150 objetivos aleatorios para aprovechar la nueva lista
-          shuf -n 150 targets.txt > active_targets.txt
+          # Subimos a 500 objetivos para aumentar la probabilidad
+          shuf -n 500 targets.txt > active_targets.txt
           
-          # APLICAMOS EL "MAZO": Si en 20 min subfinder no acaba, lo mata y sigue
-          # Esto evita que se quede 20 horas en un solo dominio como Uber
-          timeout 20m $(go env GOPATH)/bin/subfinder -dL active_targets.txt -t 200 -silent -o live_subs.txt || echo "Timeout alcanzado en Subfinder, procesando lo encontrado..."
+          # Aumentamos los hilos (-t 400) para ir a máxima velocidad
+          timeout 25m $(go env GOPATH)/bin/subfinder -dL active_targets.txt -t 400 -silent -o live_subs.txt || echo "Timeout, procediendo con lo recolectado..."
 
       - name: Run Surgical Engine
         env:
