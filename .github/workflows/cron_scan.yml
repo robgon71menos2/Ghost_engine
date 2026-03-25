@@ -1,7 +1,7 @@
 name: Ghost-Engine-24-7
 on:
   schedule:
-    - cron: '0 */6 * * *' # Se ejecuta cada 6 horas (4 veces al día)
+    - cron: '0 * * * *' # Se ejecuta cada 6 horas (4 veces al día)
   workflow_dispatch: # Permite ejecución manual desde el botón de GitHub
 
 jobs:
