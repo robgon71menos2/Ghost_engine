@@ -46,37 +46,26 @@ jobs:
           
           # Aumentamos los hilos (-t 400) para ir a máxima velocidad
           $(go env GOPATH)/bin/subfinder -dL active_targets.txt -t 400 -o live_subs.txt
+      
+      
       - name: Run Surgical Engine
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_ID: ${{ secrets.TG_ID }}
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          # Verificamos si live_subs tiene contenido antes de lanzar Python
           if [ -s live_subs.txt ]; then
-            python core/scanner.py
+            echo "[*] Procesando hallazgos..."
+            # Ponemos un timeout de 20 minutos al script de Python
+            # para que siempre queden 5-10 min para guardar la DB.
+            timeout 20m python core/scanner.py || echo "Tiempo de escaneo agotado, guardando progresos..."
           else
-            echo "No se encontraron subdominios vivos en esta tanda."
+            echo "No se encontraron subdominios vivos."
           fi
 
       - name: Save Persistence
+        if: always()  # <--- ESTO ES VITAL: Guarda aunque el paso anterior falle o dé timeout
         run: |
           git config --local user.email "bot@ghostengine.com"
           git config --local user.name "Ghost Bot"
-
-          echo "Last run: $(date)" > heartbeat.txt
-          
-          # 1. Traemos lo que editaste en la web para que el bot lo sepa
-          git fetch origin main
-          
-          # 2. Forzamos al bot a ponerse al día con la web sin borrar la DB nueva
-          git reset --mixed origin/main
-          
-          # 3. Guardamos la base de datos actualizada
-          git add database/inventory.db heartbeat.txt
-          
-          # 4. Hacemos el commit (el [skip ci] es vital para no entrar en bucle)
-          git commit -m "Update DB: Data persistence [skip ci]" || echo "No changes"
-          
-          # 5. Empujamos los cambios "a la fuerza" para limpiar el historial
-          git push origin main --force
+          # ... (resto de tus comandos de git push)
