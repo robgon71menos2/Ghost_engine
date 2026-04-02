@@ -13,6 +13,7 @@ permissions:
 jobs:
   surgical-monetization:
     runs-on: ubuntu-latest
+    if: always()
     # Añadimos un timeout global al job por seguridad (máximo 1 hora)
     timeout-minutes: 60 
     
@@ -42,12 +43,12 @@ jobs:
       - name: Selective Discovery
         run: |
           # Subimos a 500 objetivos para aumentar la probabilidad
-          shuf -n 400 targets.txt > active_targets.txt
+          shuf -n 500 targets.txt > active_targets.txt
           
           # Aumentamos los hilos (-t 400) para ir a máxima velocidad
-          $(go env GOPATH)/bin/subfinder -dL active_targets.txt -t 400 -o live_subs.txt
-      
-      
+          timeout 10m $(go env GOPATH)/bin/subfinder -dL active_targets.txt -t 200 -silent -o live_subs.txt || echo "Timeout alcanzado, procesando hallazgos..."
+
+
       - name: Run Surgical Engine
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
@@ -55,17 +56,31 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           if [ -s live_subs.txt ]; then
-            echo "[*] Procesando hallazgos..."
-            # Ponemos un timeout de 20 minutos al script de Python
-            # para que siempre queden 5-10 min para guardar la DB.
-            timeout 20m python core/scanner.py || echo "Tiempo de escaneo agotado, guardando progresos..."
+            echo "[*] Iniciando escaneo intensivo (Límite: 30 min)..."
+            # Si el script tarda más de 30m, se corta y seguimos al siguiente paso
+            timeout 30m python core/scanner.py || echo "Tiempo agotado, guardando lo encontrado..."
           else
-            echo "No se encontraron subdominios vivos."
+            echo "Sin subdominios para procesar."
           fi
 
       - name: Save Persistence
-        if: always()  # <--- ESTO ES VITAL: Guarda aunque el paso anterior falle o dé timeout
         run: |
           git config --local user.email "bot@ghostengine.com"
           git config --local user.name "Ghost Bot"
-          # ... (resto de tus comandos de git push)
+
+          echo "Last run: $(date)" > heartbeat.txt
+          
+          # 1. Traemos lo que editaste en la web para que el bot lo sepa
+          git fetch origin main
+          
+          # 2. Forzamos al bot a ponerse al día con la web sin borrar la DB nueva
+          git reset --mixed origin/main
+          
+          # 3. Guardamos la base de datos actualizada
+          git add database/inventory.db heartbeat.txt
+          
+          # 4. Hacemos el commit (el [skip ci] es vital para no entrar en bucle)
+          git commit -m "Update DB: Data persistence [skip ci]" || echo "No changes"
+          
+          # 5. Empujamos los cambios "a la fuerza" para limpiar el historial
+          git push origin main --force
