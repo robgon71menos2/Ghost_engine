@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fingerprint import check_vulnerability
 
 DB_PATH = os.path.join(os.getcwd(), "database", "inventory.db")
-GH_USERNAME = "SecondDrake" # <--- CAMBIA ESTO
+GH_USERNAME = "robgon71menos2" # <--- CAMBIA ESTO
 MAX_THREADS = 30 # Nitro activo
 
 def init_db():
