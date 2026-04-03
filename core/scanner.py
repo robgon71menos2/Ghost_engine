@@ -24,18 +24,32 @@ def notify_telegram(msg):
     requests.get(f"https://api.telegram.org/bot{token}/sendMessage?chat_id={chat_id}&text={msg}&parse_mode=Markdown")
 
 def auto_takeover_github(domain):
-    # (Lógica de creación de repo que ya probamos con éxito)
     gh_token = os.getenv("GH_PAT")
     repo_name = f"ghost-{domain.replace('.', '-')}"
     headers = {"Authorization": f"token {gh_token}", "Accept": "application/vnd.github.v3+json"}
     
+    # 1. Mantenemos tu creación de repo igual
     r = requests.post("https://api.github.com/user/repos", headers=headers, json={"name": repo_name, "auto_init": True})
+    
     if r.status_code == 201:
+        # --- CAMBIO IMPORTANTE: Esperar a que el repo exista realmente ---
+        import time
+        time.sleep(2) 
+        
         try:
             with open("dist/index.html", "rb") as f:
                 content = base64.b64encode(f.read()).decode()
-            requests.put(f"https://api.github.com/repos/{GH_USERNAME}/{repo_name}/contents/index.html", headers=headers, json={"message": "Ghost Deploy", "content": content})
-            requests.put(f"https://api.github.com/repos/{GH_USERNAME}/{repo_name}/pages", headers=headers, json={"cname": domain, "source": {"branch": "main", "path": "/"}})
+            
+            # 2. Subir el index (Añadimos la rama explícita 'main')
+            # Si GH_USERNAME no es dinámico, asegúrate que en las 3 cuentas coincida el nombre
+            requests.put(f"https://api.github.com/repos/{GH_USERNAME}/{repo_name}/contents/index.html", 
+                         headers=headers, 
+                         json={"message": "Ghost Deploy", "content": content, "branch": "main"})
+            
+            # 3. Activar Pages (Añadimos el bloque 'source' completo)
+            requests.post(f"https://api.github.com/repos/{GH_USERNAME}/{repo_name}/pages", 
+                         headers=headers, 
+                         json={"cname": domain, "source": {"branch": "main", "path": "/"}})
             return True
         except: return False
     return False
